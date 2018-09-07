@@ -1,10 +1,9 @@
 import math
+import numpy as np
 import pandas as pd
-from collections import Counter
+from gensim.models import Word2Vec
 from networkx import DiGraph
-from networkx.algorithms.simple_paths import all_simple_paths
 
-# import the graph
 G = DiGraph()
 with open("train.txt", 'r') as f:
     for line in f.read().split('\n'):
@@ -14,18 +13,23 @@ with open("train.txt", 'r') as f:
             G.add_edges_from((src, dest) for dest in line[1:])
 print("---- Read Finish ----")
 
-beta = 0.5
+model = Word2Vec.load("node2vec.model")
+print("---- Word2Vec Model Loaded ----")
+
 ids, scores = [], []
+k = 5
 with open("test-public.txt", 'r') as f:
     lines = f.read().split('\n')
+    nn = G.number_of_nodes()
     for line in lines[1:]:
         if line:
-            pid, p1, p2 = list(line.split())
+            pid, p1, p2 = line.split()
             ids.append(pid)
             print(f"{pid}: {p1} -> {p2}")
-            cn = set(G.successors(p1)).intersection(set(G.predecessors(p2)))
-            s = math.tanh(sum(1 / math.log(G.out_degree(z) + 1) for z in cn))
-            print(f"Adamic/Adar: {s}")
+            s = model.wv.similarity(p1, p2)
+            if s < 0:
+                s = 0
+            print(f"Random Walk Similarity: {s}")
             scores.append(s)
 print("---- Process Finish ----")
 
